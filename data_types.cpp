@@ -6,6 +6,76 @@
 
 using namespace std;
 
+
+/*************************************************************************************/
+
+/*************************************************************************************/
+
+
+void set_node_id(void *node, int id)
+{
+    Info **info = NULL;
+
+    info = (Info **)node;
+    if (info) {
+        (*info)->id = id;
+    }
+}
+
+
+/*************************************************************************************/
+
+/*************************************************************************************/
+
+
+void set_node_type(void *node, DataType type)
+{
+
+    Info **info = NULL;
+
+    info = (Info **)node;
+    if (info) {
+        (*info)->type = type;
+    }
+}
+
+
+/*************************************************************************************/
+
+/*************************************************************************************/
+
+
+int get_node_id(void *node)
+{
+    Info **info = NULL;
+    int value = -1;
+
+    info = (Info **)node;
+    if (info) {
+        value = (*info)->id;
+    }
+    return value;
+}
+
+
+/*************************************************************************************/
+
+/*************************************************************************************/
+
+
+DataType get_node_type(void *node)
+{
+    Info **info = NULL;
+    DataType value = UNKNOWN;
+
+    info = (Info **)node;
+    if (info) {
+        value = (*info)->type;
+    }
+    return value;
+}
+
+
 /*************************************************************************************/
 
 /*************************************************************************************/
@@ -17,6 +87,14 @@ void check_def_tokn(string tokn)
 
         gvar->def_flag = 1;
         gvar->def_tokn = get_tokn();
+
+
+    }
+
+    // unset the def flag when you find the first opening bracket "{"
+    if (gvar->def_flag && tokn.find("{") != string::npos) {
+        gvar->def_flag = 0;
+        gvar->def_tokn = "";
 
     }
 
@@ -30,9 +108,14 @@ void check_def_tokn(string tokn)
 void check_use_tokn(string tokn)
 {
 
+    if (gvar->use_flag) {
+        gvar->use_flag = 0;
+        gvar->use_tokn = "";
+    }
+
     if (tokn.find("USE") != string::npos) {
         gvar->use_flag = 1;
-
+        gvar->use_tokn = get_tokn();
 
     }
 
@@ -59,6 +142,28 @@ void add_to_def(string tokn, Container *container)
     gvar->def_flag = 0;
     gvar->def_tokn = "";
 }
+
+/*************************************************************************************/
+
+/*************************************************************************************/
+
+
+void add_to_def_map(string tokn, void *data)
+{
+    // eukolaki vazeis sto map perneis apo to map
+    // o kwdika tha mpei mesa stin get_tokn opote
+    // den tha mplexoume me ta alla
+    // prepei na kanw kai ta alla na epistrefoun container
+    // episi na kanw kai to group
+    // poly testing para poly :)
+
+    if (gvar->def_map2) {
+        (*(gvar->def_map2))[tokn] = data;
+    }
+    gvar->def_flag = 0;
+    gvar->def_tokn = "";
+}
+
 
 /*************************************************************************************/
 
@@ -269,6 +374,18 @@ void init_def(map<string, Container *> **def)
 
 /*************************************************************************************/
 
+/*************************************************************************************/
+
+void init_def_map2(map<string, void *> **def_map2)
+{
+    if (*def_map2 == NULL) {
+        *def_map2 = new map<string, void *>;
+    }
+}
+
+
+/*************************************************************************************/
+
 /* Point */
 
 /*************************************************************************************/
@@ -425,6 +542,7 @@ Coordinate *new_coordinate()
 
     if (coordinate) {
         //coordinate_vec = new vector<Point *>;
+        coordinate->info = new Info;
         coordinate->coordinate_vec = coordinate_vec;
     }
     return coordinate;
@@ -498,6 +616,7 @@ void *read_coordinate(void *data) {
             }
 
         }
+        set_node_type(coordinate, COORDINATE);
     }
 
     //debug_read_coordinate(coordinate);
@@ -629,6 +748,7 @@ PointSet *new_point_set()
     point_set = new PointSet;
     if (point_set) {
         //coordinate = new_coordinate();
+        point_set->info = new Info;
         point_set->coordinate = coordinate;
     }
     return point_set;
@@ -656,6 +776,7 @@ void debug_read_point_set(PointSet *point_set)
     Point *point = NULL;
 
     if (point_set) {
+
         coordinate = point_set->coordinate;
         if (coordinate) {
             coordinate_vec = coordinate->coordinate_vec;
@@ -670,6 +791,30 @@ void debug_read_point_set(PointSet *point_set)
     }
 }
 
+
+/*************************************************************************************/
+
+/*************************************************************************************/
+
+
+void store_data_point_set(PointSet *point_set, void *data)
+{
+    DataType type = UNKNOWN;
+
+    if (data) {
+
+        type = get_node_type(data);
+
+        switch (type) {
+        case COORDINATE:
+            point_set->coordinate = (Coordinate *)data;
+            break;
+
+        }
+    }
+}
+
+
 /*************************************************************************************/
 
 /*************************************************************************************/
@@ -680,35 +825,61 @@ void *read_point_set(void *args)
 
     PointSet *point_set = NULL;
     string tokn = "";
-    Shape *shape = NULL;
+    void *data = NULL;
+    int def_flag = 0;
+    string def_tokn = "";
 
-    shape = (Shape *)args;
 
     point_set = new_point_set();
 
     if (point_set) {
 
         while (tokn.find("}") == string::npos) {
+
+           // tokn = get_tokn();
+
+//------------------------------
+
+            //Edw prepei na to ksanadw to vrady...
+
+           // if (gvar->use_flag) {
+            //    data = (*gvar->def_map2)[gvar->use_tokn];
+             //   store_data_point_set(point_set, data);
+            //}
+
+
+            if (gvar->def_flag) {
+                def_flag = 1;
+                def_tokn = gvar->def_tokn;
+            }
+
+            data = NULL;
+
             tokn = get_tokn();
 
-            //call_node_read_function(tokn, point_set);
+            data = call_node_read_function(tokn, NULL);
 
-            if (tokn.find("Coordinate") != string::npos) {
+            store_data_point_set(point_set, data);
+
+            if (def_flag && data !=NULL) {
+                add_to_def_map(def_tokn, data);
+            }
+
+//------------------------------
+
+            /*if (tokn.find("Coordinate") != string::npos) {
 
                 point_set->coordinate = (Coordinate *)read_coordinate(point_set);
 
             } else if (tokn.find("Color") != string::npos) {
                 ;
-            }
+            }*/
         }
-    }
-    if (shape) {
-        shape->point_set = point_set;
+        set_node_type(point_set, POINT_SET);
     }
 
-    //debug_read_point_set(point_set);
+    debug_read_point_set(point_set);
     return point_set;
-
 }
 
 /*************************************************************************************/
@@ -750,7 +921,7 @@ Shape *new_shape()
         //shape->point_set = new_point_set();
         //shape->indexed_line_set = new_indexed_line_set();
         //shape->indexed_face_set = new_indexed_face_set();
-
+        shape->info = new Info;
         shape->appearance = NULL;
         shape->point_set = NULL;
         shape->indexed_line_set = NULL;
@@ -779,7 +950,7 @@ void delete_shape(Shape *shape)
 /*************************************************************************************/
 
 
-void debug_read_shape(Container *container)
+void debug_read_shape(void *args)
 {
     PointSet *point_set = NULL;
     Coordinate *coordinate = NULL;
@@ -788,7 +959,7 @@ void debug_read_shape(Container *container)
     Point *point = NULL;
     Shape *shape = NULL;
 
-    shape = (Shape *) get_container_data(container);
+    shape = (Shape *) args;
 
     if (shape) {
 
@@ -812,17 +983,48 @@ void debug_read_shape(Container *container)
     }
 }
 
-/*************************************************************************************/
 
 /*************************************************************************************/
 
-void *read_shape(void *data)
+/*************************************************************************************/
+
+void store_data_shape(Shape *shape, void *data)
+{
+    DataType type = UNKNOWN;
+
+    if (data) {
+
+        type = get_node_type(data);
+
+        switch (type) {
+        case POINT_SET:
+            shape->point_set = (PointSet *)data;
+            break;
+        case INDEXED_LINE_SET:
+            break;
+        case INDEXED_FACE_SET:
+            break;
+
+        }
+    }
+
+}
+
+
+/*************************************************************************************/
+
+/*************************************************************************************/
+
+void *read_shape(void *args)
 {
     cout << "Hello Shape" << endl;
 
     Shape *shape = NULL;
     Container *container = NULL;
     string tokn = "";
+    void *data = NULL;
+    int def_flag = 0;
+    string def_tokn = "";
 
     shape = new_shape();
     container = new_container();
@@ -834,31 +1036,51 @@ void *read_shape(void *data)
     if (shape) {
 
         while (tokn.find("}") == string::npos) {
+
+//------------------------------
+
+//          (1) Thelw mia sinattisi pou na tsimpaei apo to def map to swsto data
+//          (2) Apo to data tha tsimpaei to type
+//          (3) Apo to type tha apofasizei pou tha to apothikevei -> store_data_shape() prepei na volevei kai edw
+//          (4) break gia na stamatisei i while, gia auto den eimai poly sigouros, mallon den xriazetai
+//              giati mporei na exeis kai alla pedia
+//
+//          opote ta data exoun apothikeutei mia xara... elpizw
+
+            if (gvar->use_flag) {
+                data = (*gvar->def_map2)[gvar->use_tokn];
+                store_data_shape(shape, data);
+            }
+
+//------------------------------
+
+
+
+            if (gvar->def_flag) {
+                def_flag = 1;
+                def_tokn = gvar->def_tokn;
+            }
+
+            data = NULL;
+
             tokn = get_tokn();
-            // na pernaw mesa to pedio oxi to struct tha lysei polla provlimata
-            call_node_read_function(tokn, shape);
 
-            /*if (tokn.find("PointSet") != string::npos) {
+            data = call_node_read_function(tokn, NULL);
 
-                //shape->point_set = (PointSet *)read_point_set(shape);
-                read_point_set(shape);
+            store_data_shape(shape, data);
 
-            } else if (tokn.find("IndexedLineSet") != string::npos) {
-                ;
-            } else if (tokn.find("IndexedFaceSet") != string::npos) {
-                ;
-            }*/
+            if (def_flag && data !=NULL) {
+                add_to_def_map(def_tokn, data);
+            }
+
         }
 
-        if (container) {
-            set_container_type(container, SHAPE);
-            set_container_data(container, shape);
-        }
+        set_node_type(shape, SHAPE);
+
 
     }
-
-    //debug_read_shape(container);
-    return container;
+    //debug_read_shape(shape);
+    return shape;
 
 }
 
@@ -875,6 +1097,7 @@ Transform *new_transform()
 
     transform = new Transform;
     if (transform) {
+        transform->info = new Info;
         transform->children = NULL;
     }
     return transform;
@@ -903,7 +1126,7 @@ void *read_translation(void *args)
     double *translation = NULL;
     Transform *transform = NULL;
 
-    //translation = (double *)args;
+
     transform = (Transform *)args;
 
     if (transform) {
@@ -938,7 +1161,7 @@ void *read_scale(void *args)
     double *scale = NULL;
     Transform *transform = NULL;
 
-    //scale = (double *)args;
+
     transform = (Transform *)args;
 
     if (transform) {
@@ -973,7 +1196,7 @@ void *read_rotation(void *args)
     double *rotation = NULL;
     Transform *transform = NULL;
 
-    //rotation = (double *)args;
+
     transform = (Transform *)args;
 
     if (transform) {
@@ -997,47 +1220,42 @@ void *read_rotation(void *args)
 
 /*************************************************************************************/
 
-void debug_read_transform(Container *container)
+void debug_read_transform(void *args)
 {
-    Transform *transform = NULL;
+
+    void *data = NULL;
+
     int i = 0;
 
-    if (container) {
+    data = args;
 
+    if (data) {
 
-        if (get_container_type(container) == SHAPE)
-        {
-            cout << "-----" << endl;
+        if (get_node_type(data) == SHAPE) {
 
-            debug_read_shape(container);
+            debug_read_shape(data);
 
+        } else if (get_node_type(data) == TRANSFORM) {
 
-        } else if (get_container_type(container) == TRANSFORM) {
+            Transform *transform = (Transform *)data;
 
+            if (transform) {
 
-                transform = (Transform *)get_container_data(container);
-
-                if (transform) {
-
-                    for (i = 0; i < 3; i++) {
-                        cout << "translation[" << i << "] -> " << transform->translation[i] << endl;
-                    }
-
-
-                    for (i = 0; i < 3; i++) {
-                        cout << "scale[" << i << "] -> " << transform->scale[i] << endl;
-                    }
-
-
-                    for (i = 0; i < 4; i++) {
-                        cout << "rotation[" << i << "] -> " << transform->rotation[i] << endl;
-                    }
+                for (i = 0; i < 3; i++) {
+                    cout << "translation[" << i << "] -> " << transform->translation[i] << endl;
                 }
-                Container *tmp_container = NULL;
 
-                tmp_container = (Container *)transform->children;
+                for (i = 0; i < 3; i++) {
+                    cout << "scale[" << i << "] -> " << transform->scale[i] << endl;
+                }
 
-                debug_read_transform(tmp_container);
+                for (i = 0; i < 4; i++) {
+                    cout << "rotation[" << i << "] -> " << transform->rotation[i] << endl;
+                }
+            }
+
+            data = transform->children;
+            debug_read_transform(data);
 
         }
     }
@@ -1048,13 +1266,46 @@ void debug_read_transform(Container *container)
 
 /*************************************************************************************/
 
-void *read_transform(void *data)
+
+void store_data_transform(Transform *transform, void *data)
+{
+    DataType type = UNKNOWN;
+
+    if (data) {
+
+        type = get_node_type(data);
+
+        switch (type) {
+        case SHAPE:
+            transform->children = data;
+            break;
+        case TRANSFORM:
+            transform->children = data;
+            break;
+        case GROUP:
+            transform->children = data;
+            break;
+
+
+        }
+    }
+
+}
+
+
+/*************************************************************************************/
+
+/*************************************************************************************/
+
+void *read_transform(void *args)
 {
     cout << "Hello Transform" << endl;
 
     Transform *transform = NULL;
     string tokn = "";
-    Container *container = NULL;
+    void *data = NULL;
+    int def_flag = 0;
+    string def_tokn = "";
 
     transform = new_transform();
 
@@ -1062,94 +1313,44 @@ void *read_transform(void *data)
 
         while (tokn.find("children") == string::npos && tokn.find("}") == string::npos) {
 
+            data = NULL;
+
             tokn = get_tokn();
 
-            call_field_read_function(tokn, transform);
+            data = call_field_read_function(tokn, transform);
 
-            /*if (tokn.find("translation") != string::npos) {
-
-                read_translation(transform->translation);
-
-            } else if (tokn.find("rotation") != string::npos) {
-
-                read_rotation(transform->rotation);
-
-            } else if (tokn.find("scale") != string::npos) {
-
-                read_scale(transform->scale);
-
-            }*/
         }
 
         if (tokn.find("children") != string::npos) {
 
-            container = new_container();
-
-            if (gvar->def_flag) {
-                add_to_def(gvar->def_tokn, container);
-                gvar->def_flag = 0;
-            }
-
-
             while(tokn.find("]") == string::npos) {
+
+                if (gvar->def_flag) {
+                    def_flag = 1;
+                    def_tokn = gvar->def_tokn;
+                }
+
+                data = NULL;
 
                 tokn = get_tokn();
 
-                transform->children = call_node_read_function(tokn, NULL);
+                data = call_node_read_function(tokn, NULL);
 
-                if (container) {
+                store_data_transform(transform, data);
 
-                    set_container_type(container, TRANSFORM);
-                    set_container_data(container, transform);
-
+                if (def_flag && data !=NULL) {
+                    add_to_def_map(def_tokn, data);
                 }
-
-                /*if (tokn.find("Shape") != string::npos) {
-
-                    transform->children = read_shape(transform);
-
-                    //container = new_container();
-
-                    if (container) {
-
-
-                        set_container_type(container, TRANSFORM);
-                        set_container_data(container, transform);
-
-                    }
-
-                } else if (tokn.find("Group") != string::npos) {
-
-                    ;
-
-                } else if (tokn.find("Transform") != string::npos) {
-
-                    //container = new_container();
-
-
-
-                    transform->children = read_transform(transform);
-
-                    if (container) {
-
-
-                        set_container_type(container, TRANSFORM);
-                        set_container_data(container, transform);
-
-                    }
-
-                } */
 
             }
 
         }
 
     }
+    set_node_type(transform, TRANSFORM);
 
-
-    //debug_read_transform(container);
-    return container;
-
+    //debug_read_transform(transform);
+    return transform;
 }
 
 /*************************************************************************************/

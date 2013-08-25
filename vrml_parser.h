@@ -17,8 +17,11 @@ typedef struct GlobalVar {
 
     map<string, Container *> *def_map;
 
+    map<string, void *> *def_map2;
+
     stack<string> *file_stack;
     vector<Container *> *frame;
+
 
     int def_flag;
     int use_flag;

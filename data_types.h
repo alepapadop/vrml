@@ -29,53 +29,62 @@ typedef struct Container {
     void *data;
 } Container;
 
-typedef struct Id {
+typedef struct Info {
     int id;
     DataType type;
 } Id;
 
 typedef struct Point {
+    struct Info *info;
     double x;
     double y;
     double z;
 } Point;
 
 typedef struct CoordIndex {
+    struct Info *info;
     vector<int> *coord_index_vec;
 } CoordIndex;
 
 
 typedef struct Coordinate {
+    struct Info *info;
     vector<Point *> *coordinate_vec;
 } Coord;
 
 typedef struct IndexedLineSet {
+    struct Info *info;
     Coordinate *coordinate;
     vector<CoordIndex *> *indexed_line_set_vec;
 } IndexedLineSet;
 
 typedef struct IndexedFaceSet {
+    struct Info *info;
     Coordinate *coordinate;
     vector<CoordIndex *> *indexed_face_set_vec;
 } IndexedFaceSet;
 
 
 typedef struct Material {
+    struct Info *info;
     double diffuse_color[3];
 }Material;
 
 
 typedef struct PointSet {
+    struct Info *info;
     Coordinate *coordinate;
 } Pointset;
 
 
 typedef struct Appearance {
+    struct Info *info;
     Material *material;
 } Appearance;
 
 
 typedef struct Shape {
+    struct Info *info;
     Appearance *appearance;
     Pointset *point_set;
     IndexedLineSet *indexed_line_set;
@@ -83,6 +92,7 @@ typedef struct Shape {
 } Shape;
 
 typedef struct Transform {
+    struct Info *info;
     double translation[3];
     double rotation[4];
     double scale[3];
@@ -90,6 +100,7 @@ typedef struct Transform {
 } Transform;
 
 typedef struct Group {
+    struct Info *info;
     double b_boc_center[3];
     double b_box_size[3];
     void *children;
@@ -133,6 +144,12 @@ void *read_point(void *args);
 void *read_translation(void *args);
 void *read_rotation(void *args);
 void *read_scale(void *args);
+int get_node_id(void *node);
+DataType get_node_type(void *node);
+void init_def_map2(map<string, void *> **def_map2);
+void add_to_def_map(string tokn, void *data);
+
+
 
 
 

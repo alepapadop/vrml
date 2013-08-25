@@ -12,7 +12,7 @@ GlobalVar *gvar = NULL;
 
 void init_gvar(map<string, DataType> *node_type_map, map<DataType, DataSup *> *type_sup_map,
                map<string, DataType> *field_type_map, stack<string> *file_stack,
-               map<string, Container *> *def_map)
+               map<string, Container *> *def_map, map<string, void *> *def_map2)
 {
     if (gvar == NULL) {
         gvar = new GlobalVar;
@@ -23,6 +23,7 @@ void init_gvar(map<string, DataType> *node_type_map, map<DataType, DataSup *> *t
     gvar->field_type_map = field_type_map;
     gvar->file_stack = file_stack;
     gvar->def_map = def_map;
+    gvar->def_map2 = def_map2;
     gvar->frame = NULL;
     gvar->def_flag = 0;
     gvar->use_flag = 0;
@@ -290,6 +291,7 @@ string get_tokn()
     }
 
     check_def_tokn(tokn);
+    check_use_tokn(tokn);
 
     return tokn;
 }
@@ -339,28 +341,88 @@ void check_shape(Container *container)
 
 /*************************************************************************************/
 
-void check_transform(Container *container)
+void check_read_point_set(void *args)
 {
-    Transform *transform =NULL;
+    Coordinate *coordinate = NULL;
+    vector<Point *> *coordinate_vec = NULL;
+    vector<Point *>::iterator it;
+    Point *point = NULL;
+    PointSet *point_set = NULL;
+
+    point_set = (PointSet *)args;
+
+    if (point_set) {
+
+        coordinate = point_set->coordinate;
+        if (coordinate) {
+            coordinate_vec = coordinate->coordinate_vec;
+            if (coordinate_vec) {
+                for (it = coordinate_vec->begin(); it != coordinate_vec->end(); ++it) {
+                    point = *it;
+                    if (point)
+                        cout << "r_point_set value: x = " << point->x << " y = " << point->y << " z = " << point->z << endl;
+                }
+            }
+        }
+    }
+}
+
+
+void check_shape2(void *args)
+{
+    PointSet *point_set = NULL;
+    Coordinate *coordinate = NULL;
+    vector<Point *> *coordinate_vec = NULL;
+    vector<Point *>::iterator it;
+    Point *point = NULL;
+    Shape *shape = NULL;
+
+    shape = (Shape *)args;
+
+    if (shape) {
+
+        point_set = shape->point_set;
+
+        if (point_set) {
+
+            coordinate = point_set->coordinate;
+            if (coordinate) {
+
+                coordinate_vec = coordinate->coordinate_vec;
+                if (coordinate_vec) {
+                    for (it = coordinate_vec->begin(); it != coordinate_vec->end(); ++it) {
+                        point = *it;
+                        if (point)
+                            cout << "r_shape value: x = " << point->x << " y = " << point->y << " z = "
+                                 << point->z << endl;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void check_transform2(void *args)
+{
+
     int i;
     DataType type;
-    void *data;
-    Container *tmp_container = NULL;
+    void *data = NULL;
+
+    data = args;
 
 
-    type = get_container_type(container);
-    data = get_container_data(container);
-    tmp_container = container;
 
     if (data) {
 
         while (data != NULL) {
 
-
+            type = get_node_type(data);
 
             if (type == SHAPE) {
 
-                check_shape((Container *)tmp_container);
+
+                check_shape2(data);
                 data = NULL;
 
             } else if ( type == TRANSFORM) {
@@ -381,10 +443,7 @@ void check_transform(Container *container)
                     cout << "rotation[" << i << "] -> " << transform->rotation[i] << endl;
                 }
 
-                tmp_container = (Container *)transform->children;
-
-                data = get_container_data(tmp_container);
-                type = get_container_type(tmp_container);
+                data = transform->children;
 
             }
         }
@@ -409,21 +468,23 @@ void check_frame(vector<Container *> *frame)
             cout << "SHAPE" << endl;
             check_shape(*it);
         } else if (type == TRANSFORM) {
-            check_transform(*it);
+            //check_transform(*it);
         }
     }
 }
 
-/*************************************************************************************/
 
 /*************************************************************************************/
 
-void debug_def()
+/*************************************************************************************/
+
+
+void debug_def2()
 {
-    map<string, Container *>::iterator def_map_it;
-    map<string, Container *> *def_map = NULL;
+    map<string, void *>::iterator def_map_it;
+    map<string, void *> *def_map = NULL;
 
-    def_map = gvar->def_map;
+    def_map = gvar->def_map2;
     int i = 0;
 
     if (def_map) {
@@ -433,11 +494,17 @@ void debug_def()
             i++;
             if (i == 1) {
                 cout << endl << "@@@@@@@@@@   TRANSFORM  @@@@@@@@@@@" << endl;
-               check_transform(def_map_it->second);
+               check_transform2(def_map_it->second);
             }
             if (i == 2) {
                 cout << endl << "@@@@@@@@@@   SHAPE  @@@@@@@@@@@" << endl;
-                check_shape(def_map_it->second);
+                check_shape2(def_map_it->second);
+
+            }
+
+            if (i == 3) {
+                cout << endl << "@@@@@@@@@@   POINTSET  @@@@@@@@@@@" << endl;
+                check_read_point_set(def_map_it->second);
 
             }
         }
@@ -521,10 +588,8 @@ void read_vrml()
     ifstream *fp = NULL;
 
     map<string, DataType> *node_type_map = NULL;
-    map<string, DataType>::iterator node_type_map_it;
 
     map<DataType, DataSup *> *type_sup_map = NULL;
-    map<DataType, DataSup *>::iterator type_sup_map_it;
 
     map<string, DataType> *field_type_map = NULL;
 
@@ -534,10 +599,9 @@ void read_vrml()
 
     map<string, Container *> *def = NULL;
 
+    map<string, void *> *def_map2 = NULL;
+
     void *data = NULL;
-
-    Container *container = NULL;
-
 
     DataType data_type = UNKNOWN;
 
@@ -547,8 +611,9 @@ void read_vrml()
     init_stack(&file_stack);
     init_frame(&frame);
     init_def(&def);
+    init_def_map2(&def_map2);
 
-    init_gvar(node_type_map, type_sup_map, field_type_map, file_stack, def);
+    init_gvar(node_type_map, type_sup_map, field_type_map, file_stack, def, def_map2);
 
     gvar->frame = frame;
 
@@ -561,58 +626,27 @@ void read_vrml()
 
     while (fp->good()) {
 
-
-        //tokn = get_token();
-        // to stack_operations isws na mpei mesa sto get_token gia
-        //na ginete apeuthias i na kanw sta grigora mia nea sinartisi na
-        // ta enwnei
-        //stack_operaions(tokn);
-
         tokn = get_tokn();
 
-        // the line is a comment
-        if (tokn.find_first_of("#") != string::npos) {
-
-            go_to_next_line();
-
-        } else {
-
-            if (gvar->def_flag) {
-                def_flag = 1;
-                def_tokn = gvar->def_tokn;
-                gvar->def_flag = 0;
-                gvar->def_tokn = "";
-            }
-
-//------------------------------
-
-            // kanto sinartisi
-
-            /*node_type_map_it = node_type_map->find(tokn);
-
-            if (node_type_map_it != node_type_map->end()) {
-
-                type_sup_map_it = type_sup_map->find(node_type_map_it->second);
-
-                if (type_sup_map_it != type_sup_map->end()) {
-
-                    data = type_sup_map_it->second->read_fun(NULL);
-                }
-
-            }*/
-
-            data = call_node_read_function(tokn, NULL);
-//-------------------------
-            if (def_flag && data !=NULL) {
-                add_to_def(def_tokn, (Container *)data);
-            }
-            if (data != NULL) {
-                frame->push_back((Container *)data);
-            }
-            data = NULL;
-            //cout << "tokn:"  << tokn << endl;
-
+        if (gvar->def_flag) {
+            def_flag = 1;
+            def_tokn = gvar->def_tokn;
+            //gvar->def_flag = 0;
+            //gvar->def_tokn = "";
         }
+
+        data = call_node_read_function(tokn, NULL);
+
+        if (def_flag && data !=NULL) {
+            add_to_def(def_tokn, (Container *)data);
+            add_to_def_map(def_tokn, data);
+            //(*(gvar->def_map2))[def_tokn] = data;
+        }
+        if (data != NULL) {
+            frame->push_back((Container *)data);
+        }
+        data = NULL;
+
 
         // lthos auto, edw einai pou tha mpainei sto file data to frame
         if (!size_stack()) {
@@ -626,7 +660,8 @@ void read_vrml()
     }
     check_frame(frame);
     debug_stack("\nSTACK \n\n");
-    debug_def();
+//    debug_def();
+    debug_def2();
 }
 
 
