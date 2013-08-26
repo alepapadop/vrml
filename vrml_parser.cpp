@@ -445,6 +445,8 @@ void check_transform2(void *args)
 
                 data = transform->children;
 
+            } else {
+                data = NULL;
             }
         }
     }
@@ -622,7 +624,8 @@ void read_vrml()
     string def_tokn;
 
     //fp = open_file("/home/alepapadop/VRML/5pointset.wrl");
-    fp = open_file("/home/alepapadop/VRML/a.wrl");
+    //fp = open_file("/home/alepapadop/VRML/a.wrl");
+    fp = open_file("/home/alepapadop/VRML/good_def_use_example.wrl");
 
     while (fp->good()) {
 

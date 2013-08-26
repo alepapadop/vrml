@@ -110,13 +110,13 @@ void check_use_tokn(string tokn)
 
     if (gvar->use_flag) {
         gvar->use_flag = 0;
-        gvar->use_tokn = "";
+        gvar->use_tokn = "";        
     }
 
-    if (tokn.find("USE") != string::npos) {
+    if (tokn.find("USE") != string::npos) {       
+        // prosoxi i seira pou exoun oi netoles einai poli simantiki
+        gvar->use_tokn = get_tokn();        
         gvar->use_flag = 1;
-        gvar->use_tokn = get_tokn();
-
     }
 
 }
@@ -842,10 +842,11 @@ void *read_point_set(void *args)
 
             //Edw prepei na to ksanadw to vrady...
 
-           // if (gvar->use_flag) {
-            //    data = (*gvar->def_map2)[gvar->use_tokn];
-             //   store_data_point_set(point_set, data);
-            //}
+            if (gvar->use_flag) {
+                data = (*gvar->def_map2)[gvar->use_tokn];
+                store_data_point_set(point_set, data);
+            }
+
 
 
             if (gvar->def_flag) {
@@ -922,6 +923,7 @@ Shape *new_shape()
         //shape->indexed_line_set = new_indexed_line_set();
         //shape->indexed_face_set = new_indexed_face_set();
         shape->info = new Info;
+        set_node_type(shape, SHAPE);
         shape->appearance = NULL;
         shape->point_set = NULL;
         shape->indexed_line_set = NULL;
@@ -1075,7 +1077,7 @@ void *read_shape(void *args)
 
         }
 
-        set_node_type(shape, SHAPE);
+        //set_node_type(shape, SHAPE);
 
 
     }
